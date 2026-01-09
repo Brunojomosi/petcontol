@@ -1,0 +1,5 @@
+{
+  "name": "PetControl",
+  "description": "A comprehensive, mobile-first expense tracker for pet owners to manage costs, view analytics, and track individual pet history.",
+  "requestFramePermissions": []
+}
