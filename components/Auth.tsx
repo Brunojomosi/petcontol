@@ -94,10 +94,6 @@ export const Auth: React.FC = () => {
             {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
           </button>
         </div>
-        
-        <div className="mt-8 text-xs text-gray-400 text-center border-t pt-4">
-            <p>Setup Required: Please configure Supabase URL and Key in <code>lib/supabaseClient.ts</code></p>
-        </div>
       </div>
     </div>
   );
