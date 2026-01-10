@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { PawPrint, Loader2, KeyRound, Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { 
+  PawPrint, 
+  Loader2, 
+  KeyRound, 
+  Mail, 
+  ArrowLeft, 
+  CheckCircle2, 
+  AlertCircle,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 
 interface AuthProps {
   initialMode?: 'signIn' | 'signUp' | 'forgotPassword' | 'updatePassword';
@@ -10,20 +20,24 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [mode, setMode] = useState<'signIn' | 'signUp' | 'forgotPassword' | 'updatePassword'>(initialMode);
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
+  // Verifica se as senhas coincidem para modos de criação/alteração
+  const passwordsMatch = mode === 'signIn' || mode === 'forgotPassword' || (password === confirmPassword && password !== '');
+  const showConfirmField = mode === 'signUp' || mode === 'updatePassword';
+
   useEffect(() => {
-    // 1. Ouvinte para eventos disparados pelo link de e-mail
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      console.log("Auth State Changed (Auth Component):", event);
       if (event === 'PASSWORD_RECOVERY') {
         setMode('updatePassword');
         setMessage({ text: 'Link validado com sucesso! Digite sua nova senha abaixo.', type: 'success' });
       }
     });
 
-    // 2. Verificação manual forçada via URL bruta
     const fullUrl = window.location.href;
     if (fullUrl.includes('type=recovery') || fullUrl.includes('access_token=')) {
       if (mode !== 'updatePassword') {
@@ -36,6 +50,13 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validação de segurança extra no submit
+    if (showConfirmField && password !== confirmPassword) {
+      setMessage({ text: 'As senhas não coincidem. Verifique e tente novamente.', type: 'error' });
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
 
@@ -67,7 +88,6 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
         if (error) throw error;
         setMessage({ text: 'Senha atualizada com sucesso! Redirecionando...', type: 'success' });
         
-        // Limpa completamente a URL para evitar loops e entra no App limpo
         setTimeout(() => {
           window.location.href = window.location.origin;
         }, 2000);
@@ -114,22 +134,62 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
           )}
 
           {mode !== 'forgotPassword' && (
-            <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
-                {mode === 'updatePassword' ? 'Sua Nova Senha' : 'Senha'}
-              </label>
-              <div className="relative">
-                <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary outline-none transition-all font-medium text-gray-700"
-                  placeholder="No mínimo 6 caracteres"
-                />
+            <div className="space-y-5">
+              {/* Campo de Senha Principal */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
+                  {mode === 'updatePassword' ? 'Sua Nova Senha' : 'Senha'}
+                </label>
+                <div className="relative">
+                  <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={6}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-12 pr-12 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary outline-none transition-all font-medium text-gray-700"
+                    placeholder="No mínimo 6 caracteres"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
               </div>
+
+              {/* Campo de Confirmação de Senha */}
+              {showConfirmField && (
+                <div className="animate-fade-in">
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Confirmar Senha</label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className={`w-full pl-12 pr-12 py-4 rounded-2xl border-2 bg-gray-50/50 focus:bg-white outline-none transition-all font-medium text-gray-700 ${
+                        confirmPassword !== '' && !passwordsMatch ? 'border-red-200 focus:border-red-400' : 'border-gray-50 focus:border-primary'
+                      }`}
+                      placeholder="Repita sua senha"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  {confirmPassword !== '' && !passwordsMatch && (
+                    <p className="text-[10px] text-red-500 font-bold mt-1.5 ml-1 animate-fade-in">As senhas não coincidem</p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -144,8 +204,8 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
 
           <button
             type="submit"
-            disabled={loading}
-            className="w-full bg-primary hover:bg-green-600 text-white font-black text-lg py-5 rounded-3xl shadow-xl shadow-green-100 transition-all flex items-center justify-center active:scale-95 disabled:opacity-50"
+            disabled={loading || (showConfirmField && !passwordsMatch)}
+            className="w-full bg-primary hover:bg-green-600 text-white font-black text-lg py-5 rounded-3xl shadow-xl shadow-green-100 transition-all flex items-center justify-center active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
           >
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 
              mode === 'signIn' ? 'Entrar' : 
@@ -174,7 +234,7 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
 
           {(mode === 'signUp' || mode === 'forgotPassword' || mode === 'updatePassword') && (
             <button
-              onClick={() => { setMode('signIn'); setMessage(null); }}
+              onClick={() => { setMode('signIn'); setMessage(null); setPassword(''); setConfirmPassword(''); }}
               className="flex items-center justify-center gap-2 w-full text-sm font-bold text-gray-400 hover:text-gray-800 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" /> Voltar ao login
