@@ -1,12 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Extracted from your connection string: db.rdbvsfbidcdsittdaunk.supabase.co
+// URL do projeto Supabase
 const SUPABASE_URL = 'https://rdbvsfbidcdsittdaunk.supabase.co'; 
 
-// DIRECT KEY USAGE:
-// We are using the key directly here to avoid issues with environment variables on Vercel.
-// Accessing 'process.env' in a browser environment can cause the app to crash (White Screen) 
-// if the bundler does not polyfill it.
+/**
+ * IMPORTANTE: Para o funcionamento do Auth e do Banco de Dados, 
+ * a chave abaixo deve ser a 'anon public key' do seu projeto Supabase.
+ */
 const SUPABASE_ANON_KEY = 'sb_publishable_24XByIW_uLY1wM7fgK-jOw_oqlRyaPK';
 
+// Inicialização do cliente. Em caso de erro na chave, o Supabase lançará uma exceção capturável.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

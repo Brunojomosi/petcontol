@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -6,13 +5,19 @@ import App from './App';
 // Registro do Service Worker para PWA
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then(registration => {
-        console.log('SW registrado com sucesso:', registration.scope);
-      })
-      .catch(error => {
-        console.log('Falha ao registrar SW:', error);
-      });
+    // Apenas tenta registrar se estivermos na mesma origem, evitando erros em ambientes de preview
+    const swUrl = new URL('./sw.js', import.meta.url);
+    if (swUrl.origin === window.location.origin) {
+      navigator.serviceWorker.register('./sw.js')
+        .then(registration => {
+          console.log('SW registrado com sucesso:', registration.scope);
+        })
+        .catch(error => {
+          console.warn('Registro de Service Worker falhou:', error);
+        });
+    } else {
+      console.log('Service Worker ignorado devido a mismatch de origem (comum em previews).');
+    }
   });
 }
 
