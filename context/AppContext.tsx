@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Pet, Expense, Reminder, DashboardMetrics } from '../types';
 import { startOfMonth, startOfYear, isAfter, parseISO } from 'date-fns';
@@ -68,7 +69,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const fetchData = async (userId: string) => {
     setLoading(true);
     try {
-      // A. Fetch Settings
       const { data: settings } = await supabase
         .from('user_settings')
         .select('currency')
@@ -84,7 +84,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         });
       }
 
-      // B. Fetch Categories (Explicitly filtered by user_id)
       const { data: catsData } = await supabase
         .from('categories')
         .select('name')
@@ -102,7 +101,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         setCategories(DEFAULT_EXPENSE_CATEGORIES);
       }
 
-      // C. Fetch Pets (Explicitly filtered by user_id)
       const { data: petsData } = await supabase
         .from('pets')
         .select('*')
@@ -121,7 +119,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         })));
       }
 
-      // D. Fetch Expenses (Explicitly filtered by user_id)
       const { data: expData } = await supabase
         .from('expenses')
         .select('*')
@@ -140,7 +137,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         })));
       }
 
-      // E. Fetch Reminders (Explicitly filtered by user_id)
       const { data: remData } = await supabase
         .from('reminders')
         .select('*')
@@ -202,9 +198,21 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const deletePet = async (id: string) => {
+    // 1. Local State Cleanup (Cascade)
     setPets(prev => prev.filter(p => p.id !== id));
+    setExpenses(prev => prev.filter(e => e.petId !== id));
+    setReminders(prev => prev.filter(r => r.petId !== id));
+    
     if(!session) return;
-    await supabase.from('pets').delete().eq('id', id).eq('user_id', session.user.id);
+    const uid = session.user.id;
+    
+    // 2. Database Cleanup (Cascade)
+    // Despesas
+    await supabase.from('expenses').delete().eq('pet_id', id).eq('user_id', uid);
+    // Lembretes
+    await supabase.from('reminders').delete().eq('pet_id', id).eq('user_id', uid);
+    // Pet
+    await supabase.from('pets').delete().eq('id', id).eq('user_id', uid);
   };
 
   const addExpense = async (expense: Expense) => {

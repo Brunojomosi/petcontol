@@ -36,17 +36,17 @@ export const Layout: React.FC = () => {
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex flex-col h-screen bg-background overflow-hidden relative">
       {/* Mobile Drawer Overlay */}
       {isMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-[60] md:hidden backdrop-blur-sm transition-opacity"
+          className="fixed inset-0 bg-black/50 z-[100] md:hidden backdrop-blur-sm transition-opacity"
           onClick={closeMenu}
         />
       )}
 
       {/* Mobile Drawer Menu */}
-      <aside className={`fixed top-0 left-0 bottom-0 w-[280px] bg-white z-[70] md:hidden transform transition-transform duration-300 ease-in-out shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed top-0 left-0 bottom-0 w-[280px] bg-white z-[110] md:hidden transform transition-transform duration-300 ease-in-out shadow-2xl ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex flex-col h-full">
           {/* Drawer Header */}
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
@@ -99,10 +99,9 @@ export const Layout: React.FC = () => {
       </aside>
 
       {/* Top Bar */}
-      <header className="bg-white shadow-sm sticky top-0 z-40 h-16 flex items-center">
+      <header className="bg-white shadow-sm sticky top-0 z-[60] h-16 flex items-center shrink-0">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="flex justify-between items-center">
-            {/* Left Side: Burger Menu (Mobile) or Logo (Desktop) */}
             <div className="flex items-center">
               <button 
                 onClick={toggleMenu}
@@ -120,7 +119,6 @@ export const Layout: React.FC = () => {
               </div>
             </div>
 
-            {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-8 items-center h-16">
               {navItems.map((item) => (
                 <NavLink 
@@ -134,7 +132,6 @@ export const Layout: React.FC = () => {
               <NavLink to="/settings" className={({ isActive }) => isActive ? "text-primary font-medium border-b-2 border-primary h-full flex items-center" : "text-gray-500 hover:text-gray-900 h-full flex items-center"}>Config</NavLink>
             </nav>
 
-            {/* Desktop CTA & Mobile Action */}
             <div className="flex items-center gap-2">
               <NavLink to="/add-expense" className="bg-primary hover:bg-green-600 text-white px-4 py-2 rounded-full hidden md:flex items-center shadow-sm transition-colors">
                 <PlusCircle className="w-4 h-4 mr-2" /> Novo Gasto
@@ -147,15 +144,15 @@ export const Layout: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto pb-24 md:pb-8 relative">
+      {/* Main Content Area - Scrollable but contained */}
+      <main className="flex-1 overflow-y-auto overflow-x-hidden pb-24 md:pb-8 relative bg-background">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Outlet />
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation - Keep Primary Actions */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+      {/* Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-[60] pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <div className="flex justify-around items-center h-16">
           <NavLink to="/" className={({ isActive }) => `flex flex-col items-center justify-center w-full h-full transition-colors ${isActive ? 'text-primary' : 'text-gray-400'}`}>
             <LayoutDashboard className="h-6 w-6" />
