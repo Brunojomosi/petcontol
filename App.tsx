@@ -28,16 +28,10 @@ const ROUTE_WEIGHTS: Record<string, number> = {
 };
 
 const AnimatedRoutes = () => {
-    const { session, loading } = useApp();
+    const { session, loading, isRecovering } = useApp();
     const location = useLocation();
     const prevPathRef = useRef(location.pathname);
     const [direction, setDirection] = useState(1);
-
-    // Detecção CRÍTICA de recuperação de senha
-    // Mesmo com sessão ativa, se a URL contiver tokens de recuperação, mostramos a redefinição.
-    const isRecoveryContext = window.location.hash.includes('type=recovery') || 
-                              window.location.hash.includes('access_token=') ||
-                              location.pathname === '/reset-password';
 
     useEffect(() => {
         const getWeight = (path: string) => {
@@ -71,12 +65,16 @@ const AnimatedRoutes = () => {
 
     if (loading) return null;
 
-    // Prioridade Máxima: Se estamos tentando redefinir senha, mostramos a tela de Auth
-    if (isRecoveryContext) {
+    // DETECÇÃO DE RECUPERAÇÃO: Prioridade total
+    // Se isRecovering do context ou tokens na URL estiverem presentes, bloqueia dashboard
+    const fullUrl = window.location.href;
+    const isRecoveryInUrl = fullUrl.includes('type=recovery') || fullUrl.includes('access_token=');
+    
+    if (isRecovering || isRecoveryInUrl) {
         return <Auth initialMode="updatePassword" />;
     }
 
-    // Se não há sessão e não é recuperação, mostramos o Login normal
+    // Se não há sessão e não é recuperação, vai para o login
     if (!session) return <Auth />;
 
     const variants = {

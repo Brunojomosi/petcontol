@@ -14,18 +14,21 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
-    // Escuta eventos de auth para mudar o modo se o Supabase disparar PASSWORD_RECOVERY
+    // 1. Ouvinte para eventos disparados pelo link de e-mail
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === 'PASSWORD_RECOVERY' && mode !== 'updatePassword') {
+      console.log("Auth State Changed (Auth Component):", event);
+      if (event === 'PASSWORD_RECOVERY') {
         setMode('updatePassword');
-        setMessage({ text: 'Link validado! Digite sua nova senha abaixo.', type: 'success' });
+        setMessage({ text: 'Link validado com sucesso! Digite sua nova senha abaixo.', type: 'success' });
       }
     });
 
-    // Verificação forçada inicial via URL
-    const hash = window.location.hash;
-    if (hash.includes('type=recovery') || hash.includes('access_token=')) {
-      setMode('updatePassword');
+    // 2. Verificação manual forçada via URL bruta
+    const fullUrl = window.location.href;
+    if (fullUrl.includes('type=recovery') || fullUrl.includes('access_token=')) {
+      if (mode !== 'updatePassword') {
+        setMode('updatePassword');
+      }
     }
 
     return () => subscription.unsubscribe();
@@ -64,7 +67,7 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
         if (error) throw error;
         setMessage({ text: 'Senha atualizada com sucesso! Redirecionando...', type: 'success' });
         
-        // Limpa a URL e recarrega para entrar no Dashboard limpo
+        // Limpa completamente a URL para evitar loops e entra no App limpo
         setTimeout(() => {
           window.location.href = window.location.origin;
         }, 2000);
@@ -103,7 +106,7 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary outline-none transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary outline-none transition-all font-medium text-gray-700"
                   placeholder="seu@email.com"
                 />
               </div>
@@ -123,7 +126,7 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
                   minLength={6}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary outline-none transition-all font-medium"
+                  className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary outline-none transition-all font-medium text-gray-700"
                   placeholder="No mínimo 6 caracteres"
                 />
               </div>

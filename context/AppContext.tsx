@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Pet, Expense, Reminder, DashboardMetrics } from '../types';
 import { startOfMonth, startOfYear, isAfter, parseISO } from 'date-fns';
@@ -9,6 +8,7 @@ import { Session } from '@supabase/supabase-js';
 interface AppContextType {
   session: Session | null;
   loading: boolean;
+  isRecovering: boolean;
   pets: Pet[];
   expenses: Expense[];
   categories: string[];
@@ -35,6 +35,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRecovering, setIsRecovering] = useState(false);
   
   const [pets, setPets] = useState<Pet[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -43,22 +44,44 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const [currency, setCurrencyState] = useState<string>('BRL');
 
   useEffect(() => {
+    // Verificação inicial de sessão
     supabase.auth.getSession().then(({ data: { session } }) => {
+      // Checa se a URL contém indícios de recuperação antes de definir a sessão como "Dashboard-ready"
+      const isRecovery = window.location.href.includes('type=recovery') || 
+                        window.location.href.includes('access_token=');
+      
+      if (isRecovery) {
+        setIsRecovering(true);
+      }
+
       setSession(session);
-      if (session) fetchData(session.user.id);
-      else setLoading(false);
+      if (session && !isRecovery) {
+        fetchData(session.user.id);
+      } else {
+        setLoading(false);
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
+      
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovering(true);
+        setLoading(false);
+        return; // Impede fetchData
+      }
+
       if (session) {
-        if (event === 'PASSWORD_RECOVERY') {
-          // Mantém carregamento falso para que o Auth.tsx lide com a recuperação
-          setLoading(false);
+        // Se não estamos em recuperação, busca os dados normalmente
+        const isRecovery = window.location.href.includes('type=recovery') || 
+                          window.location.href.includes('access_token=');
+        if (!isRecovery) {
+            fetchData(session.user.id);
         } else {
-          fetchData(session.user.id);
+            setIsRecovering(true);
+            setLoading(false);
         }
       } else {
         setPets([]);
@@ -66,6 +89,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         setCategories([]);
         setReminders([]);
         setLoading(false);
+        setIsRecovering(false);
       }
     });
 
@@ -138,7 +162,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
           amount: parseFloat(e.amount),
           date: e.date,
           category: e.category,
-          paymentMethod: e.payment_method,
+          payment_method: e.payment_method,
           notes: e.notes
         })));
       }
@@ -164,16 +188,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const updateCurrency = async (newCurrency: string) => {
-    if (!session) return;
-    await supabase
-      .from('user_settings')
-      .upsert({ 
-          user_id: session.user.id, 
-          currency: newCurrency
-      });
   };
 
   const addPet = async (pet: Pet) => {
@@ -284,7 +298,13 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
 
   const setCurrency = async (c: string) => {
     setCurrencyState(c);
-    await updateCurrency(c);
+    if (!session) return;
+    await supabase
+      .from('user_settings')
+      .upsert({ 
+          user_id: session.user.id, 
+          currency: c
+      });
   };
 
   const resetApp = async () => {
@@ -307,7 +327,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     }));
     await supabase.from('categories').insert(defaults);
     setCategories(DEFAULT_EXPENSE_CATEGORIES);
-    await updateCurrency('BRL');
+    await setCurrency('BRL');
   };
 
   const signOut = async () => {
@@ -348,6 +368,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     <AppContext.Provider value={{
       session,
       loading,
+      isRecovering,
       pets,
       expenses,
       categories,
