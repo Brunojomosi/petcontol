@@ -41,7 +41,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [currency, setCurrencyState] = useState<string>('BRL');
 
-  // 1. Initialize Auth Session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -66,11 +65,10 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  // 2. Fetch Data Helper
   const fetchData = async (userId: string) => {
     setLoading(true);
     try {
-      // A. Fetch Settings (Currency)
+      // A. Fetch Settings
       const { data: settings } = await supabase
         .from('user_settings')
         .select('currency')
@@ -86,10 +84,11 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         });
       }
 
-      // B. Fetch Categories
+      // B. Fetch Categories (Explicitly filtered by user_id)
       const { data: catsData } = await supabase
         .from('categories')
         .select('name')
+        .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
       if (catsData && catsData.length > 0) {
@@ -99,15 +98,15 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
             user_id: userId,
             name: cat
         }));
-        const { error } = await supabase.from('categories').insert(defaults);
-        if (!error) setCategories(DEFAULT_EXPENSE_CATEGORIES);
-        else setCategories(DEFAULT_EXPENSE_CATEGORIES);
+        await supabase.from('categories').insert(defaults);
+        setCategories(DEFAULT_EXPENSE_CATEGORIES);
       }
 
-      // C. Fetch Pets
+      // C. Fetch Pets (Explicitly filtered by user_id)
       const { data: petsData } = await supabase
         .from('pets')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
       if (petsData) {
@@ -122,10 +121,11 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         })));
       }
 
-      // D. Fetch Expenses
+      // D. Fetch Expenses (Explicitly filtered by user_id)
       const { data: expData } = await supabase
         .from('expenses')
         .select('*')
+        .eq('user_id', userId)
         .order('date', { ascending: false });
 
       if (expData) {
@@ -140,10 +140,11 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         })));
       }
 
-      // E. Fetch Reminders
+      // E. Fetch Reminders (Explicitly filtered by user_id)
       const { data: remData } = await supabase
         .from('reminders')
         .select('*')
+        .eq('user_id', userId)
         .order('date', { ascending: true });
 
       if (remData) {
@@ -163,38 +164,29 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     }
   };
 
-  // 3. Actions
   const updateCurrency = async (newCurrency: string) => {
     if (!session) return;
-    try {
-        await supabase
-        .from('user_settings')
-        .upsert({ 
-            user_id: session.user.id, 
-            currency: newCurrency
-        });
-    } catch (err) {
-        console.error("Error saving currency", err);
-    }
+    await supabase
+      .from('user_settings')
+      .upsert({ 
+          user_id: session.user.id, 
+          currency: newCurrency
+      });
   };
 
   const addPet = async (pet: Pet) => {
     if (!session) return;
-    try {
-        setPets(prev => [...prev, pet]);
-        await supabase.from('pets').insert({
-            id: pet.id,
-            user_id: session.user.id,
-            name: pet.name,
-            species: pet.species,
-            breed: pet.breed,
-            birth_date: pet.birthDate,
-            status: pet.status,
-            photo_url: pet.photoUrl
-        });
-    } catch (err) {
-        console.error("Error adding pet", err);
-    }
+    setPets(prev => [...prev, pet]);
+    await supabase.from('pets').insert({
+        id: pet.id,
+        user_id: session.user.id,
+        name: pet.name,
+        species: pet.species,
+        breed: pet.breed,
+        birth_date: pet.birthDate,
+        status: pet.status,
+        photo_url: pet.photoUrl
+    });
   };
 
   const updatePet = async (updatedPet: Pet) => {
@@ -206,13 +198,13 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         breed: updatedPet.breed,
         birth_date: updatedPet.birthDate,
         status: updatedPet.status
-    }).eq('id', updatedPet.id);
+    }).eq('id', updatedPet.id).eq('user_id', session.user.id);
   };
 
   const deletePet = async (id: string) => {
     setPets(prev => prev.filter(p => p.id !== id));
     if(!session) return;
-    await supabase.from('pets').delete().eq('id', id);
+    await supabase.from('pets').delete().eq('id', id).eq('user_id', session.user.id);
   };
 
   const addExpense = async (expense: Expense) => {
@@ -233,7 +225,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const deleteExpense = async (id: string) => {
     setExpenses(prev => prev.filter(e => e.id !== id));
     if(!session) return;
-    await supabase.from('expenses').delete().eq('id', id);
+    await supabase.from('expenses').delete().eq('id', id).eq('user_id', session.user.id);
   };
 
   const addCategory = async (category: string) => {
@@ -272,13 +264,13 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const toggleReminder = async (id: string, isCompleted: boolean) => {
     if (!session) return;
     setReminders(prev => prev.map(r => r.id === id ? { ...r, isCompleted } : r));
-    await supabase.from('reminders').update({ is_completed: isCompleted }).eq('id', id);
+    await supabase.from('reminders').update({ is_completed: isCompleted }).eq('id', id).eq('user_id', session.user.id);
   };
 
   const deleteReminder = async (id: string) => {
     if (!session) return;
     setReminders(prev => prev.filter(r => r.id !== id));
-    await supabase.from('reminders').delete().eq('id', id);
+    await supabase.from('reminders').delete().eq('id', id).eq('user_id', session.user.id);
   };
 
   const setCurrency = async (c: string) => {
@@ -288,10 +280,11 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
 
   const resetApp = async () => {
     if(!session) return;
-    await supabase.from('expenses').delete().neq('id', '00000000-0000-0000-0000-000000000000'); 
-    await supabase.from('pets').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('categories').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('reminders').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    const uid = session.user.id;
+    await supabase.from('expenses').delete().eq('user_id', uid); 
+    await supabase.from('pets').delete().eq('user_id', uid);
+    await supabase.from('categories').delete().eq('user_id', uid);
+    await supabase.from('reminders').delete().eq('user_id', uid);
     
     setPets([]);
     setExpenses([]);
@@ -300,12 +293,11 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     setCurrencyState('BRL');
     
     const defaults = DEFAULT_EXPENSE_CATEGORIES.map(cat => ({
-        user_id: session.user.id,
+        user_id: uid,
         name: cat
     }));
     await supabase.from('categories').insert(defaults);
     setCategories(DEFAULT_EXPENSE_CATEGORIES);
-    
     await updateCurrency('BRL');
   };
 
@@ -331,7 +323,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
       if (isAfter(expDate, yearStart)) totalYear += amount;
 
       categoryMap[exp.category] = (categoryMap[exp.category] || 0) + amount;
-      const petName = pets.find(p => p.id === exp.petId)?.name || 'Unknown';
+      const petName = pets.find(p => p.id === exp.petId)?.name || 'Desconhecido';
       petMap[petName] = (petMap[petName] || 0) + amount;
     });
 
