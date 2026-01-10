@@ -20,6 +20,7 @@ const ROUTE_WEIGHTS: Record<string, number> = {
     '/expenses': 1,
     '/health': 1,
     '/settings': 1,
+    '/reset-password': 0,
     '/pets/:id': 2,
     '/pets/add': 2,
     '/pets/edit/:id': 3,
@@ -30,27 +31,28 @@ const AnimatedRoutes = () => {
     const { session, loading } = useApp();
     const location = useLocation();
     const prevPathRef = useRef(location.pathname);
-    const [direction, setDirection] = useState(1); // 1 = forward (right-to-left), -1 = back (left-to-right)
+    const [direction, setDirection] = useState(1);
+
+    // Detecção CRÍTICA de recuperação de senha
+    // Mesmo com sessão ativa, se a URL contiver tokens de recuperação, mostramos a redefinição.
+    const isRecoveryContext = window.location.hash.includes('type=recovery') || 
+                              window.location.hash.includes('access_token=') ||
+                              location.pathname === '/reset-password';
 
     useEffect(() => {
         const getWeight = (path: string) => {
             if (path.includes('/edit/')) return 3;
-            if (path.startsWith('/pets/')) {
-                return path === '/pets/add' ? 2 : 2;
-            }
+            if (path.startsWith('/pets/')) return 2;
             return ROUTE_WEIGHTS[path] ?? 0;
         };
 
         const prevWeight = getWeight(prevPathRef.current);
         const currWeight = getWeight(location.pathname);
 
-        if (currWeight > prevWeight) {
-            setDirection(1);
-        } else if (currWeight < prevWeight) {
-            setDirection(-1);
-        } else {
-            setDirection(1);
-        }
+        if (currWeight > prevWeight) setDirection(1);
+        else if (currWeight < prevWeight) setDirection(-1);
+        else setDirection(1);
+        
         prevPathRef.current = location.pathname;
     }, [location.pathname]);
 
@@ -68,6 +70,13 @@ const AnimatedRoutes = () => {
     }, [loading]);
 
     if (loading) return null;
+
+    // Prioridade Máxima: Se estamos tentando redefinir senha, mostramos a tela de Auth
+    if (isRecoveryContext) {
+        return <Auth initialMode="updatePassword" />;
+    }
+
+    // Se não há sessão e não é recuperação, mostramos o Login normal
     if (!session) return <Auth />;
 
     const variants = {
