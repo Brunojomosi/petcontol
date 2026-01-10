@@ -1,12 +1,14 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Trash2, Filter } from 'lucide-react';
+import { Trash2, Filter, Edit2 } from 'lucide-react';
 import { getCategoryColor, SPECIES_EMOJI } from '../constants';
 
 export const ExpenseList: React.FC = () => {
+  const navigate = useNavigate();
   const { expenses, pets, deleteExpense, currency } = useApp();
   const [filterPet, setFilterPet] = useState<string>('all');
 
@@ -70,20 +72,28 @@ export const ExpenseList: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-4">
-                <span className="font-bold text-gray-800">
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-gray-800 mr-2">
                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: currency }).format(expense.amount)}
                 </span>
-                <button 
-                    onClick={() => {
-                        if (confirm('Deseja realmente excluir este gasto?')) {
-                            deleteExpense(expense.id);
-                        }
-                    }}
-                    className="text-gray-300 hover:text-red-500"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button 
+                        onClick={() => navigate(`/expenses/edit/${expense.id}`)}
+                        className="text-gray-300 hover:text-primary p-2 transition-colors"
+                    >
+                        <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                        onClick={() => {
+                            if (confirm('Deseja realmente excluir este gasto?')) {
+                                deleteExpense(expense.id);
+                            }
+                        }}
+                        className="text-gray-300 hover:text-red-500 p-2 transition-colors"
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
               </div>
             </div>
           );

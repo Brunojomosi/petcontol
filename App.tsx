@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
@@ -32,7 +33,6 @@ const AnimatedRoutes = () => {
 
     if (loading) return null;
 
-    // DETECÇÃO DE RECUPERAÇÃO: Prioridade total
     const fullUrl = window.location.href;
     const isRecoveryInUrl = fullUrl.includes('type=recovery') || fullUrl.includes('access_token=');
     
@@ -40,10 +40,8 @@ const AnimatedRoutes = () => {
         return <Auth initialMode="updatePassword" />;
     }
 
-    // Se não há sessão e não é recuperação, vai para o login
     if (!session) return <Auth />;
 
-    // Variantes simples de Fade
     const pageVariants = {
         initial: {
             opacity: 0,
@@ -85,6 +83,7 @@ const AnimatedRoutes = () => {
                         <Route path="pets/add" element={<PetForm />} />
                         <Route path="pets/edit/:id" element={<PetForm />} />
                         <Route path="expenses" element={<ExpenseList />} />
+                        <Route path="expenses/edit/:id" element={<ExpenseForm />} />
                         <Route path="add-expense" element={<ExpenseForm />} />
                         <Route path="health" element={<Reminders />} />
                         <Route path="settings" element={<Settings />} />

@@ -1,20 +1,27 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Reminder } from '../types';
 import { format, isPast, isToday, parseISO } from 'date-fns';
-import { Calendar, CheckCircle2, Circle, Plus, Trash2, Syringe, Pill, Stethoscope, AlertCircle } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, Plus, Trash2, Syringe, Pill, Stethoscope, AlertCircle, Edit2, X } from 'lucide-react';
 
 export const Reminders: React.FC = () => {
-  const { pets, reminders, addReminder, toggleReminder, deleteReminder } = useApp();
+  const { pets, reminders, addReminder, updateReminder, toggleReminder, deleteReminder } = useApp();
   const [selectedPetId, setSelectedPetId] = useState<string>(pets.length > 0 ? pets[0].id : '');
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form State
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
 
-  // Filter reminders for the selected pet
+  // Handle auto-selection of pet if none selected but available
+  useEffect(() => {
+    if (!selectedPetId && pets.length > 0) {
+      setSelectedPetId(pets[0].id);
+    }
+  }, [pets, selectedPetId]);
+
   const petReminders = reminders
     .filter(r => r.petId === selectedPetId)
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -22,22 +29,39 @@ export const Reminders: React.FC = () => {
   const upcomingReminders = petReminders.filter(r => !r.isCompleted);
   const completedReminders = petReminders.filter(r => r.isCompleted);
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleEdit = (reminder: Reminder) => {
+    setEditingId(reminder.id);
+    setTitle(reminder.title);
+    setDate(new Date(reminder.date).toISOString().split('T')[0]);
+    setIsFormOpen(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const resetForm = () => {
+    setTitle('');
+    setDate('');
+    setEditingId(null);
+    setIsFormOpen(false);
+  };
+
+  const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedPetId) return;
 
-    const newReminder: Reminder = {
-      id: crypto.randomUUID(),
+    const reminderData: Reminder = {
+      id: editingId || crypto.randomUUID(),
       petId: selectedPetId,
       title,
-      date,
-      isCompleted: false
+      date: new Date(date).toISOString(),
+      isCompleted: editingId ? (reminders.find(r => r.id === editingId)?.isCompleted || false) : false
     };
 
-    addReminder(newReminder);
-    setTitle('');
-    setDate('');
-    setIsFormOpen(false);
+    if (editingId) {
+      updateReminder(reminderData);
+    } else {
+      addReminder(reminderData);
+    }
+    resetForm();
   };
 
   const getIcon = (title: string) => {
@@ -61,23 +85,23 @@ export const Reminders: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in px-1">
-      {/* Header with improved wrapping for small screens */}
       <div className="flex justify-between items-start gap-4">
         <h1 className="text-2xl font-black text-gray-800 leading-tight">Saúde e Lembretes</h1>
-        <button 
-            onClick={() => setIsFormOpen(!isFormOpen)}
-            className="bg-primary text-white px-4 py-2.5 rounded-2xl flex items-center text-sm font-bold shadow-lg shadow-green-100 hover:bg-green-600 transition-all active:scale-95 shrink-0"
-        >
-          <Plus className="w-4 h-4 mr-1.5" /> Novo
-        </button>
+        {!isFormOpen && (
+          <button 
+              onClick={() => setIsFormOpen(true)}
+              className="bg-primary text-white px-4 py-2.5 rounded-2xl flex items-center text-sm font-bold shadow-lg shadow-green-100 hover:bg-green-600 transition-all active:scale-95 shrink-0"
+          >
+            <Plus className="w-4 h-4 mr-1.5" /> Novo
+          </button>
+        )}
       </div>
 
-      {/* Pet Selector - Simplified Pill Style */}
       <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1 -mx-1 px-1">
         {pets.map(pet => (
             <button
               key={pet.id}
-              onClick={() => setSelectedPetId(pet.id)}
+              onClick={() => { setSelectedPetId(pet.id); if(editingId) resetForm(); }}
               className={`flex-shrink-0 px-5 py-2 rounded-full text-xs font-bold border-2 transition-all ${
                   selectedPetId === pet.id 
                   ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100 scale-105' 
@@ -89,14 +113,22 @@ export const Reminders: React.FC = () => {
         ))}
       </div>
 
-      {/* Add Form with better spacing */}
       {isFormOpen && (
-        <form onSubmit={handleAdd} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-5 animate-fade-in">
+        <form onSubmit={handleSave} className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm space-y-5 animate-fade-in ring-2 ring-primary/5">
+            <div className="flex justify-between items-center mb-1">
+                <h2 className="text-sm font-black text-primary uppercase tracking-widest">
+                    {editingId ? 'Editar Lembrete' : 'Novo Lembrete'}
+                </h2>
+                <button type="button" onClick={resetForm} className="text-gray-300 hover:text-gray-500">
+                    <X className="w-5 h-5" />
+                </button>
+            </div>
             <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">O que lembrar?</label>
                 <input 
                     type="text" 
                     required
+                    autoFocus
                     value={title}
                     onChange={e => setTitle(e.target.value)}
                     className="w-full px-5 py-3.5 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary outline-none transition-all font-medium text-gray-700"
@@ -114,13 +146,14 @@ export const Reminders: React.FC = () => {
                 />
             </div>
             <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setIsFormOpen(false)} className="flex-1 py-3.5 text-sm font-bold text-gray-400 hover:bg-gray-50 rounded-2xl transition-colors">Cancelar</button>
-                <button type="submit" className="flex-1 bg-primary text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-600 transition-all active:scale-95">Salvar</button>
+                <button type="button" onClick={resetForm} className="flex-1 py-3.5 text-sm font-bold text-gray-400 hover:bg-gray-50 rounded-2xl transition-colors">Cancelar</button>
+                <button type="submit" className="flex-1 bg-primary text-white py-3.5 rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-green-600 transition-all active:scale-95">
+                    {editingId ? 'Atualizar' : 'Salvar'}
+                </button>
             </div>
         </form>
       )}
 
-      {/* Upcoming List */}
       <div className="pt-2">
         <h3 className="text-sm font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
             <Calendar className="w-4 h-4" /> Próximos
@@ -153,16 +186,20 @@ export const Reminders: React.FC = () => {
                                 </p>
                             </div>
                         </div>
-                        <button onClick={() => deleteReminder(r.id)} className="p-2 text-gray-200 hover:text-red-500 transition-colors">
-                            <Trash2 className="w-5 h-5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => handleEdit(r)} className="p-2 text-gray-200 hover:text-primary transition-colors">
+                                <Edit2 className="w-5 h-5" />
+                            </button>
+                            <button onClick={() => deleteReminder(r.id)} className="p-2 text-gray-200 hover:text-red-500 transition-colors">
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                        </div>
                     </div>
                 );
             })}
         </div>
       </div>
 
-      {/* Completed List */}
       {completedReminders.length > 0 && (
           <div className="pt-8 mt-4 border-t border-gray-100">
             <h3 className="text-sm font-black text-gray-300 uppercase tracking-widest mb-4 flex items-center gap-2">
@@ -180,9 +217,14 @@ export const Reminders: React.FC = () => {
                                 <p className="text-[10px] font-bold text-gray-400">{format(parseISO(r.date), 'dd/MM/yyyy')}</p>
                             </div>
                         </div>
-                        <button onClick={() => deleteReminder(r.id)} className="p-2 text-gray-300 hover:text-red-400">
-                            <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => handleEdit(r)} className="p-2 text-gray-300 hover:text-primary">
+                                <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => deleteReminder(r.id)} className="p-2 text-gray-300 hover:text-red-400">
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
                 ))}
             </div>

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Pet, Expense, Reminder, DashboardMetrics } from '../types';
 import { startOfMonth, startOfYear, isAfter, parseISO } from 'date-fns';
@@ -18,10 +19,12 @@ interface AppContextType {
   updatePet: (pet: Pet) => Promise<void>;
   deletePet: (id: string) => Promise<void>;
   addExpense: (expense: Expense) => Promise<void>;
+  updateExpense: (expense: Expense) => Promise<void>;
   deleteExpense: (id: string) => Promise<void>;
   addCategory: (category: string) => Promise<void>;
   removeCategory: (category: string) => Promise<void>;
   addReminder: (reminder: Reminder) => Promise<void>;
+  updateReminder: (reminder: Reminder) => Promise<void>;
   toggleReminder: (id: string, isCompleted: boolean) => Promise<void>;
   deleteReminder: (id: string) => Promise<void>;
   setCurrency: (currency: string) => Promise<void>;
@@ -44,16 +47,11 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const [currency, setCurrencyState] = useState<string>('BRL');
 
   useEffect(() => {
-    // Verificação inicial de sessão
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // Checa se a URL contém indícios de recuperação antes de definir a sessão como "Dashboard-ready"
       const isRecovery = window.location.href.includes('type=recovery') || 
                         window.location.href.includes('access_token=');
       
-      if (isRecovery) {
-        setIsRecovering(true);
-      }
-
+      if (isRecovery) setIsRecovering(true);
       setSession(session);
       if (session && !isRecovery) {
         fetchData(session.user.id);
@@ -62,24 +60,19 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
       }
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecovering(true);
         setLoading(false);
-        return; // Impede fetchData
+        return;
       }
 
       if (session) {
-        // Se não estamos em recuperação, busca os dados normalmente
         const isRecovery = window.location.href.includes('type=recovery') || 
                           window.location.href.includes('access_token=');
-        if (!isRecovery) {
-            fetchData(session.user.id);
-        } else {
+        if (!isRecovery) fetchData(session.user.id);
+        else {
             setIsRecovering(true);
             setLoading(false);
         }
@@ -99,43 +92,33 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const fetchData = async (userId: string) => {
     setLoading(true);
     try {
-      const { data: settings } = await supabase
-        .from('user_settings')
-        .select('currency')
-        .eq('user_id', userId)
-        .single();
+      const [
+        { data: settings },
+        { data: catsData },
+        { data: petsData },
+        { data: expData },
+        { data: remData }
+      ] = await Promise.all([
+        supabase.from('user_settings').select('currency').eq('user_id', userId).maybeSingle(),
+        supabase.from('categories').select('name').eq('user_id', userId).order('created_at', { ascending: true }),
+        supabase.from('pets').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
+        supabase.from('expenses').select('*').eq('user_id', userId).order('date', { ascending: false }),
+        supabase.from('reminders').select('*').eq('user_id', userId).order('date', { ascending: true })
+      ]);
 
       if (settings) {
         setCurrencyState(settings.currency);
       } else {
-        await supabase.from('user_settings').insert({ 
-            user_id: userId, 
-            currency: 'BRL',
-        });
+        await supabase.from('user_settings').upsert({ user_id: userId, currency: 'BRL' });
       }
-
-      const { data: catsData } = await supabase
-        .from('categories')
-        .select('name')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
 
       if (catsData && catsData.length > 0) {
         setCategories(catsData.map((c: any) => c.name));
       } else {
-        const defaults = DEFAULT_EXPENSE_CATEGORIES.map(cat => ({
-            user_id: userId,
-            name: cat
-        }));
-        await supabase.from('categories').insert(defaults);
         setCategories(DEFAULT_EXPENSE_CATEGORIES);
+        const defaults = DEFAULT_EXPENSE_CATEGORIES.map(cat => ({ user_id: userId, name: cat }));
+        supabase.from('categories').insert(defaults).then();
       }
-
-      const { data: petsData } = await supabase
-        .from('pets')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
 
       if (petsData) {
         setPets(petsData.map((p: any) => ({
@@ -149,12 +132,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
         })));
       }
 
-      const { data: expData } = await supabase
-        .from('expenses')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: false });
-
       if (expData) {
         setExpenses(expData.map((e: any) => ({
           id: e.id,
@@ -162,16 +139,10 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
           amount: parseFloat(e.amount),
           date: e.date,
           category: e.category,
-          payment_method: e.payment_method,
+          paymentMethod: e.payment_method,
           notes: e.notes
         })));
       }
-
-      const { data: remData } = await supabase
-        .from('reminders')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: true });
 
       if (remData) {
         setReminders(remData.map((r: any) => ({
@@ -184,7 +155,7 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
       }
 
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Erro ao carregar dados:', error);
     } finally {
       setLoading(false);
     }
@@ -206,8 +177,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const updatePet = async (updatedPet: Pet) => {
-    setPets(prev => prev.map(p => p.id === updatedPet.id ? updatedPet : p));
     if(!session) return;
+    setPets(prev => prev.map(p => p.id === updatedPet.id ? updatedPet : p));
     await supabase.from('pets').update({
         name: updatedPet.name,
         species: updatedPet.species,
@@ -218,16 +189,16 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const deletePet = async (id: string) => {
+    if(!session) return;
+    const uid = session.user.id;
     setPets(prev => prev.filter(p => p.id !== id));
     setExpenses(prev => prev.filter(e => e.petId !== id));
     setReminders(prev => prev.filter(r => r.petId !== id));
-    
-    if(!session) return;
-    const uid = session.user.id;
-    
-    await supabase.from('expenses').delete().eq('pet_id', id).eq('user_id', uid);
-    await supabase.from('reminders').delete().eq('pet_id', id).eq('user_id', uid);
-    await supabase.from('pets').delete().eq('id', id).eq('user_id', uid);
+    await Promise.all([
+      supabase.from('expenses').delete().eq('pet_id', id).eq('user_id', uid),
+      supabase.from('reminders').delete().eq('pet_id', id).eq('user_id', uid),
+      supabase.from('pets').delete().eq('id', id).eq('user_id', uid)
+    ]);
   };
 
   const addExpense = async (expense: Expense) => {
@@ -245,9 +216,22 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     });
   };
 
+  const updateExpense = async (expense: Expense) => {
+    if (!session) return;
+    setExpenses(prev => prev.map(e => e.id === expense.id ? expense : e));
+    await supabase.from('expenses').update({
+      pet_id: expense.petId,
+      amount: expense.amount,
+      date: expense.date,
+      category: expense.category,
+      payment_method: expense.paymentMethod,
+      notes: expense.notes
+    }).eq('id', expense.id).eq('user_id', session.user.id);
+  };
+
   const deleteExpense = async (id: string) => {
-    setExpenses(prev => prev.filter(e => e.id !== id));
     if(!session) return;
+    setExpenses(prev => prev.filter(e => e.id !== id));
     await supabase.from('expenses').delete().eq('id', id).eq('user_id', session.user.id);
   };
 
@@ -255,20 +239,14 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     if (!session) return;
     if (!categories.includes(category)) {
       setCategories(prev => [...prev, category]);
-      await supabase.from('categories').insert({
-        user_id: session.user.id,
-        name: category
-      });
+      await supabase.from('categories').insert({ user_id: session.user.id, name: category });
     }
   };
 
   const removeCategory = async (category: string) => {
     if (!session) return;
     setCategories(prev => prev.filter(c => c !== category));
-    await supabase.from('categories')
-        .delete()
-        .eq('user_id', session.user.id)
-        .eq('name', category);
+    await supabase.from('categories').delete().eq('user_id', session.user.id).eq('name', category);
   };
 
   const addReminder = async (reminder: Reminder) => {
@@ -282,6 +260,17 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
       date: reminder.date,
       is_completed: reminder.isCompleted
     });
+  };
+
+  const updateReminder = async (reminder: Reminder) => {
+    if (!session) return;
+    setReminders(prev => prev.map(r => r.id === reminder.id ? reminder : r));
+    await supabase.from('reminders').update({
+      pet_id: reminder.petId,
+      title: reminder.title,
+      date: reminder.date,
+      is_completed: reminder.isCompleted
+    }).eq('id', reminder.id).eq('user_id', session.user.id);
   };
 
   const toggleReminder = async (id: string, isCompleted: boolean) => {
@@ -299,63 +288,48 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   const setCurrency = async (c: string) => {
     setCurrencyState(c);
     if (!session) return;
-    await supabase
-      .from('user_settings')
-      .upsert({ 
-          user_id: session.user.id, 
-          currency: c
-      });
+    await supabase.from('user_settings').upsert({ user_id: session.user.id, currency: c }, { onConflict: 'user_id' });
   };
 
   const resetApp = async () => {
     if(!session) return;
     const uid = session.user.id;
-    await supabase.from('expenses').delete().eq('user_id', uid); 
-    await supabase.from('pets').delete().eq('user_id', uid);
-    await supabase.from('categories').delete().eq('user_id', uid);
-    await supabase.from('reminders').delete().eq('user_id', uid);
-    
+    setLoading(true);
+    await Promise.all([
+      supabase.from('expenses').delete().eq('user_id', uid),
+      supabase.from('pets').delete().eq('user_id', uid),
+      supabase.from('categories').delete().eq('user_id', uid),
+      supabase.from('reminders').delete().eq('user_id', uid)
+    ]);
     setPets([]);
     setExpenses([]);
-    setCategories([]);
+    setCategories(DEFAULT_EXPENSE_CATEGORIES);
     setReminders([]);
     setCurrencyState('BRL');
-    
-    const defaults = DEFAULT_EXPENSE_CATEGORIES.map(cat => ({
-        user_id: uid,
-        name: cat
-    }));
+    const defaults = DEFAULT_EXPENSE_CATEGORIES.map(cat => ({ user_id: uid, name: cat }));
     await supabase.from('categories').insert(defaults);
-    setCategories(DEFAULT_EXPENSE_CATEGORIES);
-    await setCurrency('BRL');
+    setLoading(false);
   };
 
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
+  const signOut = async () => { await supabase.auth.signOut(); };
 
   const getMetrics = (): DashboardMetrics => {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const yearStart = startOfYear(now);
-
     let totalMonth = 0;
     let totalYear = 0;
     const categoryMap: Record<string, number> = {};
     const petMap: Record<string, number> = {};
-
     expenses.forEach(exp => {
       const expDate = parseISO(exp.date);
       const amount = Number(exp.amount);
-
       if (isAfter(expDate, monthStart)) totalMonth += amount;
       if (isAfter(expDate, yearStart)) totalYear += amount;
-
       categoryMap[exp.category] = (categoryMap[exp.category] || 0) + amount;
       const petName = pets.find(p => p.id === exp.petId)?.name || 'Desconhecido';
       petMap[petName] = (petMap[petName] || 0) + amount;
     });
-
     return {
       totalMonth,
       totalYear,
@@ -366,28 +340,9 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
 
   return (
     <AppContext.Provider value={{
-      session,
-      loading,
-      isRecovering,
-      pets,
-      expenses,
-      categories,
-      reminders,
-      currency,
-      addPet,
-      updatePet,
-      deletePet,
-      addExpense,
-      deleteExpense,
-      addCategory,
-      removeCategory,
-      addReminder,
-      toggleReminder,
-      deleteReminder,
-      setCurrency,
-      resetApp,
-      getMetrics,
-      signOut
+      session, loading, isRecovering, pets, expenses, categories, reminders, currency,
+      addPet, updatePet, deletePet, addExpense, updateExpense, deleteExpense, addCategory, removeCategory,
+      addReminder, updateReminder, toggleReminder, deleteReminder, setCurrency, resetApp, getMetrics, signOut
     }}>
       {children}
     </AppContext.Provider>

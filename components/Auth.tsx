@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { 
@@ -26,7 +27,15 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
   const [mode, setMode] = useState<'signIn' | 'signUp' | 'forgotPassword' | 'updatePassword'>(initialMode);
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
 
-  // Verifica se as senhas coincidem para modos de criação/alteração
+  const translateError = (error: string) => {
+    if (error.includes('Invalid login credentials')) return 'E-mail ou senha incorretos. Verifique os dados e tente novamente.';
+    if (error.includes('User already registered')) return 'Este e-mail já está cadastrado no sistema.';
+    if (error.includes('Email not confirmed')) return 'Seu e-mail ainda não foi confirmado. Verifique sua caixa de entrada (ou spam).';
+    if (error.includes('Password should be at least 6 characters')) return 'A senha deve ter pelo menos 6 caracteres.';
+    if (error.includes('Unable to validate email address')) return 'E-mail inválido. Verifique o formato digitado.';
+    return error;
+  };
+
   const passwordsMatch = mode === 'signIn' || mode === 'forgotPassword' || (password === confirmPassword && password !== '');
   const showConfirmField = mode === 'signUp' || mode === 'updatePassword';
 
@@ -51,7 +60,6 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validação de segurança extra no submit
     if (showConfirmField && password !== confirmPassword) {
       setMessage({ text: 'As senhas não coincidem. Verifique e tente novamente.', type: 'error' });
       return;
@@ -60,33 +68,37 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
     setLoading(true);
     setMessage(null);
 
+    const cleanEmail = email.trim().toLowerCase();
     const redirectTo = window.location.origin + '/';
 
     try {
       if (mode === 'signUp') {
         const { error } = await supabase.auth.signUp({ 
-          email, 
+          email: cleanEmail, 
           password,
           options: { emailRedirectTo: redirectTo }
         });
         if (error) throw error;
-        setMessage({ text: 'Verifique seu e-mail para confirmar a conta.', type: 'success' });
+        setMessage({ text: 'Conta criada! Verifique seu e-mail para confirmar o acesso.', type: 'success' });
       } 
       else if (mode === 'signIn') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ 
+          email: cleanEmail, 
+          password 
+        });
         if (error) throw error;
       } 
       else if (mode === 'forgotPassword') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
           redirectTo: redirectTo,
         });
         if (error) throw error;
-        setMessage({ text: `Link de recuperação enviado para ${email}.`, type: 'success' });
+        setMessage({ text: `Link de recuperação enviado para ${cleanEmail}.`, type: 'success' });
       } 
       else if (mode === 'updatePassword') {
         const { error } = await supabase.auth.updateUser({ password });
         if (error) throw error;
-        setMessage({ text: 'Senha atualizada com sucesso! Redirecionando...', type: 'success' });
+        setMessage({ text: 'Senha atualizada com sucesso! Entrando no app...', type: 'success' });
         
         setTimeout(() => {
           window.location.href = window.location.origin;
@@ -94,7 +106,7 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
       }
     } catch (error: any) {
       console.error('Erro Auth:', error);
-      setMessage({ text: error.message, type: 'error' });
+      setMessage({ text: translateError(error.message), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -127,7 +139,7 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary outline-none transition-all font-medium text-gray-700"
-                  placeholder="seu@email.com"
+                  placeholder="exemplo@email.com"
                 />
               </div>
             </div>
@@ -135,7 +147,6 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
 
           {mode !== 'forgotPassword' && (
             <div className="space-y-5">
-              {/* Campo de Senha Principal */}
               <div>
                 <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">
                   {mode === 'updatePassword' ? 'Sua Nova Senha' : 'Senha'}
@@ -161,7 +172,6 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
                 </div>
               </div>
 
-              {/* Campo de Confirmação de Senha */}
               {showConfirmField && (
                 <div className="animate-fade-in">
                   <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 ml-1">Confirmar Senha</label>
@@ -185,16 +195,13 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
-                  {confirmPassword !== '' && !passwordsMatch && (
-                    <p className="text-[10px] text-red-500 font-bold mt-1.5 ml-1 animate-fade-in">As senhas não coincidem</p>
-                  )}
                 </div>
               )}
             </div>
           )}
 
           {message && (
-            <div className={`p-4 rounded-2xl text-sm font-bold flex items-start gap-3 animate-fade-in ${
+            <div className={`p-4 rounded-2xl text-xs font-bold flex items-start gap-3 animate-fade-in ${
               message.type === 'success' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-red-50 text-red-600 border border-red-100'
             }`}>
               {message.type === 'success' ? <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" /> : <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />}
@@ -205,12 +212,12 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
           <button
             type="submit"
             disabled={loading || (showConfirmField && !passwordsMatch)}
-            className="w-full bg-primary hover:bg-green-600 text-white font-black text-lg py-5 rounded-3xl shadow-xl shadow-green-100 transition-all flex items-center justify-center active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+            className="w-full bg-primary hover:bg-green-600 text-white font-black text-lg py-5 rounded-3xl shadow-xl shadow-green-100 transition-all flex items-center justify-center active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? <Loader2 className="w-6 h-6 animate-spin" /> : 
-             mode === 'signIn' ? 'Entrar' : 
-             mode === 'signUp' ? 'Criar Conta' : 
-             mode === 'forgotPassword' ? 'Enviar Link' : 'Salvar Nova Senha'}
+             mode === 'signIn' ? 'Entrar no App' : 
+             mode === 'signUp' ? 'Criar Minha Conta' : 
+             mode === 'forgotPassword' ? 'Enviar E-mail' : 'Salvar Senha'}
           </button>
         </form>
 
@@ -219,15 +226,15 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
             <>
               <button
                 onClick={() => { setMode('forgotPassword'); setMessage(null); }}
-                className="block w-full text-sm font-bold text-gray-400 hover:text-primary transition-colors"
+                className="block w-full text-xs font-bold text-gray-400 hover:text-primary transition-colors"
               >
-                Esqueceu a senha?
+                Esqueci minha senha
               </button>
               <button
                 onClick={() => { setMode('signUp'); setMessage(null); }}
                 className="text-sm font-bold text-gray-600 hover:text-primary transition-colors"
               >
-                Não tem conta? <span className="text-primary underline">Cadastre-se</span>
+                Não tem conta? <span className="text-primary underline">Cadastre-se grátis</span>
               </button>
             </>
           )}
@@ -237,7 +244,7 @@ export const Auth: React.FC<AuthProps> = ({ initialMode = 'signIn' }) => {
               onClick={() => { setMode('signIn'); setMessage(null); setPassword(''); setConfirmPassword(''); }}
               className="flex items-center justify-center gap-2 w-full text-sm font-bold text-gray-400 hover:text-gray-800 transition-colors"
             >
-              <ArrowLeft className="w-4 h-4" /> Voltar ao login
+              <ArrowLeft className="w-4 h-4" /> Voltar para o Login
             </button>
           )}
         </div>

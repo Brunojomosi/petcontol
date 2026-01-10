@@ -1,23 +1,40 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Expense, ExpenseCategory, PaymentMethod } from '../../types';
 import { PAYMENT_METHODS } from '../../constants';
-import { ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Save, Trash2 } from 'lucide-react';
 
 export const ExpenseForm: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { addExpense, pets, categories, currency } = useApp();
+  const { addExpense, updateExpense, deleteExpense, pets, categories, currency, expenses } = useApp();
   
+  const isEditing = !!id;
+  const existingExpense = isEditing ? expenses.find(e => e.id === id) : null;
+
   // Form State
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState<ExpenseCategory>(categories[0] || 'Other');
-  const [petId, setPetId] = useState<string>(pets.length > 0 ? pets[0].id : '');
+  const [category, setCategory] = useState<ExpenseCategory>('');
+  const [petId, setPetId] = useState<string>('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  // Fix: Use 'Crédito' instead of 'Credit' to match PaymentMethod type
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Crédito');
   const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (isEditing && existingExpense) {
+      setAmount(existingExpense.amount.toString());
+      setCategory(existingExpense.category);
+      setPetId(existingExpense.petId);
+      setDate(new Date(existingExpense.date).toISOString().split('T')[0]);
+      setPaymentMethod(existingExpense.paymentMethod);
+      setNotes(existingExpense.notes || '');
+    } else {
+        if (categories.length > 0) setCategory(categories[0]);
+        if (pets.length > 0) setPetId(pets[0].id);
+    }
+  }, [isEditing, existingExpense, categories, pets]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +43,8 @@ export const ExpenseForm: React.FC = () => {
         return;
     }
 
-    const newExpense: Expense = {
-      id: crypto.randomUUID(),
+    const expenseData: Expense = {
+      id: isEditing ? id! : crypto.randomUUID(),
       amount: parseFloat(amount),
       category,
       petId,
@@ -36,8 +53,19 @@ export const ExpenseForm: React.FC = () => {
       notes: notes || undefined
     };
 
-    addExpense(newExpense);
+    if (isEditing) {
+      updateExpense(expenseData);
+    } else {
+      addExpense(expenseData);
+    }
     navigate('/expenses');
+  };
+
+  const handleDelete = () => {
+    if (confirm('Deseja excluir permanentemente este gasto?')) {
+        deleteExpense(id!);
+        navigate('/expenses');
+    }
   };
 
   if (pets.length === 0) {
@@ -63,19 +91,23 @@ export const ExpenseForm: React.FC = () => {
           <button onClick={() => navigate(-1)} className="mr-4 p-2 -ml-2 text-gray-400 hover:text-gray-800 transition-colors">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-2xl font-bold text-gray-800">Novo Gasto</h1>
+          <h1 className="text-2xl font-bold text-gray-800">{isEditing ? 'Editar Gasto' : 'Novo Gasto'}</h1>
         </div>
+        {isEditing && (
+            <button onClick={handleDelete} className="p-2 text-red-400 hover:text-red-600">
+                <Trash2 className="w-5 h-5" />
+            </button>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-6">
         
-        {/* Amount Input */}
         <div>
           <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 ml-1">Valor do Gasto</label>
           <div className="relative group">
             <span className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-300 font-bold text-2xl group-focus-within:text-primary transition-colors">{currency}</span>
             <input 
-              autoFocus
+              autoFocus={!isEditing}
               required
               type="number" 
               step="0.01"
@@ -87,7 +119,6 @@ export const ExpenseForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Pet Selection */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-3 ml-1">Para qual Pet?</label>
           <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1 px-1 -mx-1">
@@ -108,7 +139,6 @@ export const ExpenseForm: React.FC = () => {
           </div>
         </div>
 
-        {/* Category & Date */}
         <div className="grid grid-cols-1 gap-5">
             <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2 ml-1">Categoria</label>
@@ -149,7 +179,6 @@ export const ExpenseForm: React.FC = () => {
             </div>
         </div>
 
-        {/* Notes */}
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2 ml-1">Notas (Opcional)</label>
           <textarea 
@@ -165,8 +194,8 @@ export const ExpenseForm: React.FC = () => {
           type="submit" 
           className="w-full bg-primary hover:bg-green-600 text-white font-black text-xl py-5 rounded-3xl shadow-xl shadow-green-100 transition-all flex items-center justify-center gap-3 mt-4 active:scale-95"
         >
-          <CheckCircle2 className="w-7 h-7" />
-          Registrar Gasto
+          {isEditing ? <Save className="w-7 h-7" /> : <CheckCircle2 className="w-7 h-7" />}
+          {isEditing ? 'Atualizar Gasto' : 'Registrar Gasto'}
         </button>
 
       </form>
