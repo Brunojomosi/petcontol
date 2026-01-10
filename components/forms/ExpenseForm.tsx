@@ -1,16 +1,13 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
 import { Expense, ExpenseCategory, PaymentMethod } from '../../types';
 import { PAYMENT_METHODS } from '../../constants';
-import { ArrowLeft, CheckCircle2, Sparkles, Loader2, AlertCircle } from 'lucide-react';
-import { GoogleGenAI, Type } from "@google/genai";
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 
 export const ExpenseForm: React.FC = () => {
   const navigate = useNavigate();
   const { addExpense, pets, categories, currency } = useApp();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Form State
   const [amount, setAmount] = useState('');
@@ -19,10 +16,6 @@ export const ExpenseForm: React.FC = () => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Credit');
   const [notes, setNotes] = useState('');
-  
-  // UI State
-  const [isScanning, setIsScanning] = useState(false);
-  const [scanError, setScanError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,77 +36,6 @@ export const ExpenseForm: React.FC = () => {
 
     addExpense(newExpense);
     navigate('/expenses');
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsScanning(true);
-    setScanError(null);
-
-    try {
-      const reader = new FileReader();
-      const base64Promise = new Promise<string>((resolve) => {
-        reader.onload = () => {
-          const base64 = (reader.result as string).split(',')[1];
-          resolve(base64);
-        };
-      });
-      reader.readAsDataURL(file);
-      const base64Data = await base64Promise;
-
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                mimeType: file.type,
-                data: base64Data,
-              },
-            },
-            {
-              text: `Analise este recibo de gastos com pet. Extraia as seguintes informações em formato JSON:
-              - amount: o valor total (apenas número)
-              - category: uma das seguintes categorias: ${categories.join(', ')}
-              - date: a data no formato YYYY-MM-DD
-              - notes: um resumo curto do que foi comprado.
-              Se não tiver certeza, chute a categoria mais próxima baseada nos itens.`
-            }
-          ],
-        },
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              amount: { type: Type.NUMBER },
-              category: { type: Type.STRING },
-              date: { type: Type.STRING },
-              notes: { type: Type.STRING }
-            },
-            required: ["amount", "category", "date"]
-          }
-        }
-      });
-
-      const result = JSON.parse(response.text || '{}');
-      
-      if (result.amount) setAmount(result.amount.toString());
-      if (result.category && categories.includes(result.category)) setCategory(result.category);
-      if (result.date) setDate(result.date);
-      if (result.notes) setNotes(result.notes);
-
-    } catch (err) {
-      console.error("Erro no escaneamento:", err);
-      setScanError("Não foi possível ler o recibo. Tente preencher manualmente.");
-    } finally {
-      setIsScanning(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
   };
 
   if (pets.length === 0) {
@@ -141,37 +63,7 @@ export const ExpenseForm: React.FC = () => {
           </button>
           <h1 className="text-2xl font-bold text-gray-800">Novo Gasto</h1>
         </div>
-        
-        <button 
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isScanning}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${
-            isScanning 
-            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-            : 'bg-purple-50 text-purple-600 hover:bg-purple-100 border border-purple-100'
-          }`}
-        >
-          {isScanning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-          {isScanning ? 'Lendo...' : 'Escanear'}
-        </button>
       </div>
-
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileUpload} 
-        accept="image/*" 
-        className="hidden" 
-        capture="environment"
-      />
-
-      {scanError && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-sm text-red-600 animate-fade-in">
-          <AlertCircle className="w-5 h-5 flex-shrink-0" />
-          {scanError}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100 space-y-6">
         
@@ -202,7 +94,7 @@ export const ExpenseForm: React.FC = () => {
                 key={pet.id}
                 type="button"
                 onClick={() => setPetId(pet.id)}
-                className={`flex-shrink-0 px-5 py-2.5 rounded-2xl text-sm font-bold border-2 transition-all whitespace-nowrap ${
+                className={`flex-shrink-0 px-5 py-2.5 rounded-2xl text-sm font-bold border-2 transition-all ${
                   petId === pet.id 
                   ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100 scale-105' 
                   : 'bg-white border-gray-100 text-gray-500 hover:bg-gray-50'
@@ -269,8 +161,7 @@ export const ExpenseForm: React.FC = () => {
 
         <button 
           type="submit" 
-          disabled={isScanning}
-          className="w-full bg-primary hover:bg-green-600 disabled:bg-gray-200 text-white font-black text-xl py-5 rounded-3xl shadow-xl shadow-green-100 transition-all flex items-center justify-center gap-3 mt-4 active:scale-95"
+          className="w-full bg-primary hover:bg-green-600 text-white font-black text-xl py-5 rounded-3xl shadow-xl shadow-green-100 transition-all flex items-center justify-center gap-3 mt-4 active:scale-95"
         >
           <CheckCircle2 className="w-7 h-7" />
           Registrar Gasto

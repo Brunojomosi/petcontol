@@ -94,7 +94,7 @@ export const Dashboard: React.FC = () => {
           <div className="h-64 w-full">
             {petData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={petData} layout="vertical" margin={{ left: 20 }}>
+                < BarChart data={petData} layout="vertical" margin={{ left: 20 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" hide />
                   <YAxis dataKey="name" type="category" width={80} tick={{fontSize: 12}} />
