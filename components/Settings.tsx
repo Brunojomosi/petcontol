@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Save, RefreshCw, Download, Plus, Trash2, Coins, LogOut } from 'lucide-react';
@@ -44,37 +45,37 @@ export const Settings: React.FC = () => {
   };
 
   const handleReset = () => {
-    if (confirm("⚠️ Are you sure? This will delete ALL your pets and expenses from the database permanently!")) {
+    if (confirm("⚠️ Tem certeza? Isso excluirá TODOS os seus pets e gastos do banco de dados permanentemente!")) {
       resetApp();
     }
   };
 
   return (
     <div className="space-y-8 animate-fade-in pb-20">
-      <h1 className="text-2xl font-bold text-gray-800">Settings</h1>
+      <h1 className="text-2xl font-bold text-gray-800">Configurações</h1>
 
-      {/* Account Section */}
+      {/* Seção da Conta */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex justify-between items-center">
         <div>
-            <h2 className="text-lg font-semibold text-gray-800">Account</h2>
-            <p className="text-sm text-gray-500">Manage your session</p>
+            <h2 className="text-lg font-semibold text-gray-800">Conta</h2>
+            <p className="text-sm text-gray-500">Gerencie sua sessão</p>
         </div>
         <button 
             onClick={signOut}
-            className="flex items-center gap-2 text-red-500 hover:bg-red-50 px-4 py-2 rounded-lg transition-colors"
+            className="flex items-center gap-2 text-red-500 hover:bg-red-50 px-4 py-2 rounded-lg transition-colors font-bold"
         >
             <LogOut className="w-5 h-5" />
-            Sign Out
+            Sair da Conta
         </button>
       </section>
 
-      {/* Currency Section */}
+      {/* Seção de Moeda */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex items-center gap-2 mb-4">
             <div className="bg-blue-50 p-2 rounded-lg">
                 <Coins className="w-5 h-5 text-secondary" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-800">Currency</h2>
+            <h2 className="text-lg font-semibold text-gray-800">Moeda</h2>
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -94,11 +95,11 @@ export const Settings: React.FC = () => {
         </div>
       </section>
 
-      {/* Categories Section */}
+      {/* Seção de Categorias */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
         <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">Expense Categories</h2>
-            <span className="text-xs text-gray-400">{categories.length} categories</span>
+            <h2 className="text-lg font-semibold text-gray-800">Categorias de Gastos</h2>
+            <span className="text-xs text-gray-400">{categories.length} categorias</span>
         </div>
 
         <form onSubmit={handleAddCategory} className="flex gap-2 mb-4">
@@ -106,7 +107,7 @@ export const Settings: React.FC = () => {
             type="text"
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
-            placeholder="Add new category..."
+            placeholder="Adicionar nova categoria..."
             className="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:border-primary focus:outline-none"
           />
           <button
@@ -125,9 +126,13 @@ export const Settings: React.FC = () => {
             >
               <span>{cat}</span>
               <button
-                onClick={() => removeCategory(cat)}
+                onClick={() => {
+                  if(confirm(`Remover a categoria "${cat}"?`)) {
+                    removeCategory(cat);
+                  }
+                }}
                 className="ml-2 text-gray-300 hover:text-red-500 transition-colors"
-                title="Remove category"
+                title="Remover categoria"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -136,9 +141,9 @@ export const Settings: React.FC = () => {
         </div>
       </section>
 
-      {/* Data Management Section */}
+      {/* Gestão de Dados */}
       <section className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Data Management</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Gestão de Dados</h2>
         
         <div className="space-y-3">
           <button
@@ -146,7 +151,7 @@ export const Settings: React.FC = () => {
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all font-medium"
           >
             <Download className="w-5 h-5" />
-            Export Data to JSON
+            Exportar Dados para JSON
           </button>
 
           <button
@@ -154,14 +159,14 @@ export const Settings: React.FC = () => {
             className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-red-100 text-red-600 bg-red-50 hover:bg-red-100 transition-all font-medium"
           >
             <RefreshCw className="w-5 h-5" />
-            Reset Database Data
+            Resetar Dados do Banco
           </button>
         </div>
       </section>
 
       <div className="text-center pt-8 pb-4">
-        <p className="text-xs text-gray-400">PetControl v1.1.0 (Cloud Sync)</p>
-        <p className="text-xs text-gray-400 mt-1">Made with 💚 for pet lovers</p>
+        <p className="text-xs text-gray-400">PetControl v1.1.0 (Sincronização Nuvem)</p>
+        <p className="text-xs text-gray-400 mt-1">Feito com 💚 para amantes de pets</p>
       </div>
     </div>
   );

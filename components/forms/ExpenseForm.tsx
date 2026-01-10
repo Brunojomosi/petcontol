@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -14,7 +15,8 @@ export const ExpenseForm: React.FC = () => {
   const [category, setCategory] = useState<ExpenseCategory>(categories[0] || 'Other');
   const [petId, setPetId] = useState<string>(pets.length > 0 ? pets[0].id : '');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Credit');
+  // Fix: Use 'Crédito' instead of 'Credit' to match PaymentMethod type
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Crédito');
   const [notes, setNotes] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {

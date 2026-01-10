@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -148,8 +149,9 @@ export const PetProfile: React.FC = () => {
           )}
           <div className="p-4 flex justify-between items-center">
             <span className="text-sm font-medium text-gray-500">Status</span>
-            <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${pet.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
-                {pet.status === 'Active' ? 'Ativo' : pet.status === 'Deceased' ? 'Anjinho 🕊️' : 'Doado'}
+            {/* Fix: use Portuguese status labels to match type and comparison */}
+            <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-lg ${pet.status === 'Ativo' ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}>
+                {pet.status === 'Ativo' ? 'Ativo' : pet.status === 'Falecido' ? 'Anjinho 🕊️' : 'Doado'}
             </span>
           </div>
         </div>

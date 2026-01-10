@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -53,8 +54,9 @@ export const PetList: React.FC = () => {
                 <h3 className="font-black text-xl text-gray-800 truncate pr-2">{pet.name}</h3>
                 <p className="text-sm font-semibold text-gray-400 truncate">{pet.breed || pet.species}</p>
                 <div className="mt-2 flex items-center gap-3">
-                    <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg ${pet.status === 'Active' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
-                        {pet.status === 'Active' ? 'Ativo' : pet.status}
+                    {/* Fix: use 'Ativo' instead of 'Active' */}
+                    <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-lg ${pet.status === 'Ativo' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
+                        {pet.status}
                     </span>
                     {pet.birthDate && (
                         <span className="text-xs text-gray-300 flex items-center gap-1">

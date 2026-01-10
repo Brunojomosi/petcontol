@@ -1,5 +1,5 @@
 {
   "name": "PetControl",
-  "description": "A comprehensive, mobile-first expense tracker for pet owners to manage costs, view analytics, and track individual pet history.",
+  "description": "Um rastreador de despesas abrangente e mobile-first para donos de pets gerenciarem custos, visualizarem análises e acompanharem o histórico individual de cada animal.",
   "requestFramePermissions": []
 }

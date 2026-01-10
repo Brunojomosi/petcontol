@@ -1,4 +1,5 @@
-export type Species = 'Cat' | 'Dog' | 'Bird' | 'Horse' | 'Other';
+
+export type Species = 'Gato' | 'Cachorro' | 'Pássaro' | 'Cavalo' | 'Outro';
 
 export interface Pet {
   id: string;
@@ -6,17 +7,17 @@ export interface Pet {
   species: Species;
   breed?: string;
   birthDate?: string;
-  photoUrl?: string; // URL or placeholder identifier
-  status: 'Active' | 'Deceased' | 'Rehomed';
+  photoUrl?: string; // URL ou identificador de placeholder
+  status: 'Ativo' | 'Falecido' | 'Doado';
 }
 
 export type ExpenseCategory = string;
 
-export type PaymentMethod = 'Credit' | 'Debit' | 'Cash' | 'Pix' | 'Transfer';
+export type PaymentMethod = 'Crédito' | 'Débito' | 'Dinheiro' | 'Pix' | 'Transferência';
 
 export interface Expense {
   id: string;
-  petId: string; // 'all' if shared or specific pet ID
+  petId: string; // 'all' se compartilhado ou ID específico do pet
   amount: number;
   date: string; // ISO String
   category: ExpenseCategory;

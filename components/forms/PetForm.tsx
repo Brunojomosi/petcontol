@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
@@ -14,10 +15,12 @@ export const PetForm: React.FC = () => {
   const existingPet = isEditing ? pets.find(p => p.id === id) : null;
 
   const [name, setName] = useState('');
-  const [species, setSpecies] = useState<Species>('Cat');
+  // Fix: use 'Gato' instead of 'Cat' to match Species type
+  const [species, setSpecies] = useState<Species>('Gato');
   const [breed, setBreed] = useState('');
   const [birthDate, setBirthDate] = useState('');
-  const [status, setStatus] = useState<'Active' | 'Deceased' | 'Rehomed'>('Active');
+  // Fix: use Portuguese status labels to match Pet['status'] type
+  const [status, setStatus] = useState<'Ativo' | 'Falecido' | 'Doado'>('Ativo');
 
   useEffect(() => {
     if (isEditing && existingPet) {
@@ -131,9 +134,10 @@ export const PetForm: React.FC = () => {
                         onChange={(e) => setStatus(e.target.value as any)}
                         className="w-full px-4 py-4 rounded-2xl border-2 border-gray-50 bg-gray-50/50 focus:bg-white focus:border-primary outline-none appearance-none transition-all font-medium text-gray-700"
                     >
-                        <option value="Active">Ativo</option>
-                        <option value="Deceased">Anjinho 🕊️</option>
-                        <option value="Rehomed">Doado</option>
+                        {/* Fix: use literal values matching the status type */}
+                        <option value="Ativo">Ativo</option>
+                        <option value="Falecido">Anjinho 🕊️</option>
+                        <option value="Doado">Doado</option>
                     </select>
                 </div>
                 <div>
