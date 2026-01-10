@@ -51,10 +51,16 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
-      if (session) fetchData(session.user.id);
-      else {
+      if (session) {
+        if (event === 'PASSWORD_RECOVERY') {
+          // Mantém carregamento falso para que o Auth.tsx lide com a recuperação
+          setLoading(false);
+        } else {
+          fetchData(session.user.id);
+        }
+      } else {
         setPets([]);
         setExpenses([]);
         setCategories([]);
@@ -198,7 +204,6 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
   };
 
   const deletePet = async (id: string) => {
-    // 1. Local State Cleanup (Cascade)
     setPets(prev => prev.filter(p => p.id !== id));
     setExpenses(prev => prev.filter(e => e.petId !== id));
     setReminders(prev => prev.filter(r => r.petId !== id));
@@ -206,12 +211,8 @@ export const AppProvider = ({ children }: { children?: ReactNode }) => {
     if(!session) return;
     const uid = session.user.id;
     
-    // 2. Database Cleanup (Cascade)
-    // Despesas
     await supabase.from('expenses').delete().eq('pet_id', id).eq('user_id', uid);
-    // Lembretes
     await supabase.from('reminders').delete().eq('pet_id', id).eq('user_id', uid);
-    // Pet
     await supabase.from('pets').delete().eq('id', id).eq('user_id', uid);
   };
 
