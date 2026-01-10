@@ -1,11 +1,13 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
+import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend } from 'recharts';
 import { getCategoryColor } from '../constants';
-import { TrendingUp, Calendar } from 'lucide-react';
+import { TrendingUp, Calendar, ChevronRight } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { getMetrics, currency } = useApp();
+  const navigate = useNavigate();
   const metrics = getMetrics();
 
   // Sort metrics for better visualization
@@ -18,13 +20,21 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <h1 className="text-2xl font-bold text-gray-800">Financial Overview</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">Visão Geral</h1>
+        <button 
+          onClick={() => navigate('/expenses')}
+          className="text-primary text-sm font-semibold flex items-center hover:underline"
+        >
+          Ver histórico <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
       
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-500">Spent this Month</p>
+            <p className="text-sm font-medium text-gray-500">Gasto no Mês</p>
             <p className="text-3xl font-bold text-primary mt-1">{fmt(metrics.totalMonth)}</p>
           </div>
           <div className="bg-green-50 p-3 rounded-full">
@@ -34,7 +44,7 @@ export const Dashboard: React.FC = () => {
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-gray-500">Total this Year</p>
+            <p className="text-sm font-medium text-gray-500">Total no Ano</p>
             <p className="text-3xl font-bold text-blue-600 mt-1">{fmt(metrics.totalYear)}</p>
           </div>
           <div className="bg-blue-50 p-3 rounded-full">
@@ -48,7 +58,7 @@ export const Dashboard: React.FC = () => {
         
         {/* Category Breakdown */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Expenses by Category</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Por Categoria</h3>
           <div className="h-64 w-full">
             {categoryData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -72,7 +82,7 @@ export const Dashboard: React.FC = () => {
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-400">
-                No data yet
+                Sem dados ainda
               </div>
             )}
           </div>
@@ -80,7 +90,7 @@ export const Dashboard: React.FC = () => {
 
         {/* Pet Breakdown */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Expenses by Pet</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Por Pet</h3>
           <div className="h-64 w-full">
             {petData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
@@ -94,7 +104,7 @@ export const Dashboard: React.FC = () => {
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-gray-400">
-                No data yet
+                Sem dados ainda
               </div>
             )}
           </div>
