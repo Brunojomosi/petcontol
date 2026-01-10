@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import { Layout } from './components/ui/Layout';
@@ -13,42 +13,9 @@ import { Settings } from './components/Settings';
 import { Auth } from './components/Auth';
 import { AnimatePresence, motion } from 'framer-motion';
 
-// Route hierarchy for direction detection
-const ROUTE_WEIGHTS: Record<string, number> = {
-    '/': 0,
-    '/pets': 1,
-    '/expenses': 1,
-    '/health': 1,
-    '/settings': 1,
-    '/reset-password': 0,
-    '/pets/:id': 2,
-    '/pets/add': 2,
-    '/pets/edit/:id': 3,
-    '/add-expense': 2
-};
-
 const AnimatedRoutes = () => {
     const { session, loading, isRecovering } = useApp();
     const location = useLocation();
-    const prevPathRef = useRef(location.pathname);
-    const [direction, setDirection] = useState(1);
-
-    useEffect(() => {
-        const getWeight = (path: string) => {
-            if (path.includes('/edit/')) return 3;
-            if (path.startsWith('/pets/')) return 2;
-            return ROUTE_WEIGHTS[path] ?? 0;
-        };
-
-        const prevWeight = getWeight(prevPathRef.current);
-        const currWeight = getWeight(location.pathname);
-
-        if (currWeight > prevWeight) setDirection(1);
-        else if (currWeight < prevWeight) setDirection(-1);
-        else setDirection(1);
-        
-        prevPathRef.current = location.pathname;
-    }, [location.pathname]);
 
     useEffect(() => {
         if (!loading) {
@@ -66,7 +33,6 @@ const AnimatedRoutes = () => {
     if (loading) return null;
 
     // DETECÇÃO DE RECUPERAÇÃO: Prioridade total
-    // Se isRecovering do context ou tokens na URL estiverem presentes, bloqueia dashboard
     const fullUrl = window.location.href;
     const isRecoveryInUrl = fullUrl.includes('type=recovery') || fullUrl.includes('access_token=');
     
@@ -77,38 +43,35 @@ const AnimatedRoutes = () => {
     // Se não há sessão e não é recuperação, vai para o login
     if (!session) return <Auth />;
 
-    const variants = {
-        initial: (direction: number) => ({
-            x: direction > 0 ? '100%' : '-30%',
-            opacity: direction > 0 ? 1 : 0.8,
-            zIndex: direction > 0 ? 2 : 1
-        }),
+    // Variantes simples de Fade
+    const pageVariants = {
+        initial: {
+            opacity: 0,
+            scale: 0.99
+        },
         animate: {
-            x: 0,
             opacity: 1,
-            zIndex: 1,
+            scale: 1,
             transition: {
-                x: { type: "spring", stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 }
+                duration: 0.2,
+                ease: "easeOut"
             }
         },
-        exit: (direction: number) => ({
-            x: direction > 0 ? '-30%' : '100%',
-            opacity: direction > 0 ? 0.8 : 1,
-            zIndex: direction > 0 ? 1 : 2,
+        exit: {
+            opacity: 0,
+            scale: 1,
             transition: {
-                x: { type: "spring", stiffness: 300, damping: 30 },
-                opacity: { duration: 0.2 }
+                duration: 0.15,
+                ease: "easeIn"
             }
-        })
+        }
     };
 
     return (
-        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
+        <AnimatePresence mode="wait">
             <motion.div
                 key={location.pathname}
-                custom={direction}
-                variants={variants}
+                variants={pageVariants}
                 initial="initial"
                 animate="animate"
                 exit="exit"
